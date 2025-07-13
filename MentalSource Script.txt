@@ -1,0 +1,749 @@
+-- Roblox Exploit UI Shell - Authentic Style
+-- Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local Camera = game.Workspace.CurrentCamera
+
+-- Create main ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ExploitUI"
+ScreenGui.Parent = PlayerGui
+ScreenGui.ResetOnSpawn = false
+
+-- Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 280, 0, 350)
+MainFrame.Position = UDim2.new(0, 50, 0, 50)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
+MainFrame.BorderSizePixel = 1
+MainFrame.Parent = ScreenGui
+
+-- Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 25)
+TitleBar.Position = UDim2.new(0, 0, 0, 0)
+TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+-- Title
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(1, -50, 1, 0)
+Title.Position = UDim2.new(0, 5, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "MentalSource"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 12
+Title.Font = Enum.Font.Code
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleBar
+
+-- Close Button
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 20, 0, 20)
+CloseButton.Position = UDim2.new(1, -23, 0, 2)
+CloseButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+CloseButton.BorderColor3 = Color3.fromRGB(80, 80, 80)
+CloseButton.BorderSizePixel = 1
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 10
+CloseButton.Font = Enum.Font.Code
+CloseButton.Parent = TitleBar
+
+-- Settings Button
+local SettingsButton = Instance.new("TextButton")
+SettingsButton.Name = "SettingsButton"
+SettingsButton.Size = UDim2.new(0, 20, 0, 20)
+SettingsButton.Position = UDim2.new(1, -46, 0, 2)
+SettingsButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+SettingsButton.BorderColor3 = Color3.fromRGB(80, 80, 80)
+SettingsButton.BorderSizePixel = 1
+SettingsButton.Text = "S"
+SettingsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SettingsButton.TextSize = 10
+SettingsButton.Font = Enum.Font.Code
+SettingsButton.Parent = TitleBar
+
+-- Content Frame
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "Content"
+ContentFrame.Size = UDim2.new(1, -10, 1, -35)
+ContentFrame.Position = UDim2.new(0, 5, 0, 30)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+-- Feature state
+local aimbotLocked = false
+local aimbotTarget = nil
+local flying = false
+local espEnabled = false
+local espData = {} -- Stores highlights and billboards
+local flySpeed = 50
+local keybinds = {
+    Aimbot = Enum.KeyCode.P,
+    Fly = Enum.KeyCode.F,
+    ESP = Enum.KeyCode.E
+}
+
+-- Get character
+local function GetCharacter()
+    local character = Player.Character
+    if not character then
+        print("[Exploit Debug] Waiting for character...")
+        for i = 1, 10 do
+            character = Player.CharacterAdded:Wait()
+            if character then break end
+            wait(0.5)
+        end
+    end
+    return character
+end
+
+-- Create feature buttons
+local function CreateFeatureButton(name, yPos, hotkey, toggleFunc)
+    local ButtonFrame = Instance.new("Frame")
+    ButtonFrame.Name = name .. "Frame"
+    ButtonFrame.Size = UDim2.new(1, 0, 0, 35)
+    ButtonFrame.Position = UDim2.new(0, 0, 0, yPos)
+    ButtonFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    ButtonFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
+    ButtonFrame.BorderSizePixel = 1
+    ButtonFrame.Parent = ContentFrame
+    
+    local FeatureLabel = Instance.new("TextLabel")
+    FeatureLabel.Name = "Label"
+    FeatureLabel.Size = UDim2.new(0, 120, 1, 0)
+    FeatureLabel.Position = UDim2.new(0, 8, 0, 0)
+    FeatureLabel.BackgroundTransparency = 1
+    FeatureLabel.Text = name
+    FeatureLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    FeatureLabel.TextSize = 12
+    FeatureLabel.Font = Enum.Font.Code
+    FeatureLabel.TextXAlignment = Enum.TextXAlignment.Left
+    FeatureLabel.Parent = ButtonFrame
+    
+    local HotkeyLabel = Instance.new("TextLabel")
+    HotkeyLabel.Name = "Hotkey"
+    HotkeyLabel.Size = UDim2.new(0, 20, 1, 0)
+    HotkeyLabel.Position = UDim2.new(0, 130, 0, 0)
+    HotkeyLabel.BackgroundTransparency = 1
+    HotkeyLabel.Text = "[" .. hotkey .. "]"
+    HotkeyLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+    HotkeyLabel.TextSize = 10
+    HotkeyLabel.Font = Enum.Font.Code
+    HotkeyLabel.TextXAlignment = Enum.TextXAlignment.Left
+    HotkeyLabel.Parent = ButtonFrame
+    
+    local StatusLabel = Instance.new("TextLabel")
+    StatusLabel.Name = "Status"
+    StatusLabel.Size = UDim2.new(0, 40, 1, 0)
+    StatusLabel.Position = UDim2.new(1, -45, 0, 0)
+    StatusLabel.BackgroundTransparency = 1
+    StatusLabel.Text = "OFF"
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+    StatusLabel.TextSize = 10
+    StatusLabel.Font = Enum.Font.Code
+    StatusLabel.TextXAlignment = Enum.TextXAlignment.Right
+    StatusLabel.Parent = ButtonFrame
+    
+    local ToggleButton = Instance.new("TextButton")
+    ToggleButton.Name = "Toggle"
+    ToggleButton.Size = UDim2.new(1, 0, 1, 0)
+    ToggleButton.Position = UDim2.new(0, 0, 0, 0)
+    ToggleButton.BackgroundTransparency = 1
+    ToggleButton.Text = ""
+    ToggleButton.Parent = ButtonFrame
+    
+    -- State tracking
+    local isEnabled = false
+    
+    -- Toggle functionality
+    local function UpdateStatus()
+        isEnabled = not isEnabled
+        StatusLabel.Text = isEnabled and "ON" or "OFF"
+        StatusLabel.TextColor3 = isEnabled and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
+        ButtonFrame.BackgroundColor3 = isEnabled and Color3.fromRGB(25, 40, 25) or Color3.fromRGB(30, 30, 30)
+        local flash = TweenService:Create(ButtonFrame, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(60, 60, 60)})
+        flash:Play()
+        flash.Completed:Connect(function()
+            TweenService:Create(ButtonFrame, TweenInfo.new(0.1), {
+                BackgroundColor3 = isEnabled and Color3.fromRGB(25, 40, 25) or Color3.fromRGB(30, 30, 30)
+            }):Play()
+        end)
+        print("[Exploit Debug] " .. name .. " toggled: " .. (isEnabled and "ON" or "OFF"))
+        toggleFunc(isEnabled)
+    end
+    
+    ToggleButton.MouseButton1Click:Connect(UpdateStatus)
+    
+    -- Hover effect
+    ToggleButton.MouseEnter:Connect(function()
+        ButtonFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    end)
+    
+    ToggleButton.MouseLeave:Connect(function()
+        ButtonFrame.BackgroundColor3 = isEnabled and Color3.fromRGB(25, 40, 25) or Color3.fromRGB(30, 30, 30)
+    end)
+    
+    return ButtonFrame, UpdateStatus
+end
+
+-- Aimbot
+local function GetClosestPlayerTorso()
+    local closestPlayer = nil
+    local closestDistance = math.huge
+    local mousePos = UserInputService:GetMouseLocation()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= Player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local torso = player.Character.HumanoidRootPart
+            local screenPos, onScreen = Camera:WorldToViewportPoint(torso.Position)
+            if onScreen then
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
+                if distance < closestDistance then
+                    closestDistance = distance
+                    closestPlayer = player
+                end
+            end
+        end
+    end
+    return closestPlayer and closestPlayer.Character and closestPlayer.Character.HumanoidRootPart
+end
+
+local function ToggleAimbot(enabled)
+    local character = GetCharacter()
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        print("[Exploit Debug] Error: No HumanoidRootPart for aimbot")
+        return
+    end
+    if enabled then
+        local torso = GetClosestPlayerTorso()
+        if torso then
+            aimbotLocked = true
+            aimbotTarget = torso
+            RunService:BindToRenderStep("Aimbot", Enum.RenderPriority.Camera.Value - 5, function()
+                if aimbotLocked and aimbotTarget and aimbotTarget.Parent then
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimbotTarget.Position)
+                    root.CFrame = CFrame.new(root.Position, aimbotTarget.Position)
+                    wait(math.random(0.01, 0.05))
+                else
+                    aimbotLocked = false
+                    aimbotTarget = nil
+                    RunService:UnbindFromRenderStep("Aimbot")
+                    print("[Exploit Debug] Aimbot OFF")
+                end
+            end)
+            StarterGui:SetCore("ChatMakeSystemMessage", {Text = "Aimbot ON"; Color = Color3.fromRGB(255, 0, 0)})
+        end
+    else
+        aimbotLocked = false
+        aimbotTarget = nil
+        RunService:UnbindFromRenderStep("Aimbot")
+        StarterGui:SetCore("ChatMakeSystemMessage", {Text = "Aimbot OFF"; Color = Color3.fromRGB(255, 0, 0)})
+    end
+end
+
+-- Fly (Your provided script)
+local function ToggleFly(enabled)
+    local character = GetCharacter()
+    local humanoid = character and character:FindFirstChild("Humanoid")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root or not humanoid then
+        print("[Exploit Debug] Error: No Humanoid or HumanoidRootPart for fly")
+        return
+    end
+    if enabled then
+        flying = true
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Name = "FlyVelocity"
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyVelocity.Parent = root
+        local bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.Name = "FlyGyro"
+        bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bodyGyro.P = 3000
+        bodyGyro.Parent = root
+        spawn(function()
+            while flying and root and root.Parent do
+                local direction = Vector3.new(0, 0, 0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                    direction = direction + Camera.CFrame.LookVector
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                    direction = direction - Camera.CFrame.LookVector
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                    direction = direction - Camera.CFrame.RightVector
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                    direction = direction + Camera.CFrame.RightVector
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                    direction = direction + Vector3.new(0, 1, 0)
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                    direction = direction - Vector3.new(0, 1, 0)
+                end
+                bodyVelocity.Velocity = direction * flySpeed
+                bodyGyro.CFrame = Camera.CFrame
+                wait()
+            end
+            flying = false
+            if root and root:FindFirstChild("FlyVelocity") then
+                root.FlyVelocity:Destroy()
+            end
+            if root and root:FindFirstChild("FlyGyro") then
+                root.FlyGyro:Destroy()
+            end
+            StarterGui:SetCore("ChatMakeSystemMessage", {Text = "Fly OFF"; Color = Color3.fromRGB(255, 0, 0)})
+        end)
+        StarterGui:SetCore("ChatMakeSystemMessage", {Text = "Fly ON"; Color = Color3.fromRGB(255, 0, 0)})
+    else
+        flying = false
+        if root and root:FindFirstChild("FlyVelocity") then
+            root.FlyVelocity:Destroy()
+        end
+        if root and root:FindFirstChild("FlyGyro") then
+            root.FlyGyro:Destroy()
+        end
+    end
+end
+
+-- ESP
+local function CreateESP(player)
+    if player == Player or not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") or not player.Character:FindFirstChild("Humanoid") then
+        return
+    end
+    local teamColor = Color3.fromRGB(255, 255, 0) -- Default yellow
+    if player.Team then
+        if player.Team.Name == "Criminals" then
+            teamColor = Color3.fromRGB(255, 0, 0) -- Red
+        elseif player.Team.Name == "Police" then
+            teamColor = Color3.fromRGB(0, 0, 255) -- Blue
+        elseif player.Team.Name == "Prisoners" then
+            teamColor = Color3.fromRGB(0, 255, 0) -- Green
+        end
+    end
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = player.Character
+    highlight.FillColor = teamColor
+    highlight.OutlineColor = teamColor
+    highlight.FillTransparency = 0.7
+    highlight.OutlineTransparency = 0
+    highlight.Parent = player.Character
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESPBillboard"
+    billboard.Adornee = player.Character.HumanoidRootPart
+    billboard.Size = UDim2.new(0, 100, 0, 60)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = player.Character
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.5
+    frame.Parent = billboard
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0.33, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.DisplayName
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextSize = 10
+    nameLabel.Font = Enum.Font.Code
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+    nameLabel.Parent = frame
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Size = UDim2.new(1, 0, 0.33, 0)
+    healthLabel.Position = UDim2.new(0, 0, 0.33, 0)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Text = math.floor(player.Character.Humanoid.Health) .. "/" .. player.Character.Humanoid.MaxHealth
+    healthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    healthLabel.TextSize = 10
+    healthLabel.Font = Enum.Font.Code
+    healthLabel.TextXAlignment = Enum.TextXAlignment.Center
+    healthLabel.Parent = frame
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Size = UDim2.new(1, 0, 0.33, 0)
+    distanceLabel.Position = UDim2.new(0, 0, 0.66, 0)
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.Text = "0 studs"
+    distanceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    distanceLabel.TextSize = 10
+    distanceLabel.Font = Enum.Font.Code
+    distanceLabel.TextXAlignment = Enum.TextXAlignment.Center
+    distanceLabel.Parent = frame
+    espData[player] = {Highlight = highlight, Billboard = billboard, HealthLabel = healthLabel, DistanceLabel = distanceLabel}
+    print("[Exploit Debug] ESP created for " .. player.Name)
+end
+
+local function ToggleESP(enabled)
+    if enabled then
+        espEnabled = true
+        for _, player in pairs(Players:GetPlayers()) do
+            CreateESP(player)
+        end
+        RunService:BindToRenderStep("ESP", Enum.RenderPriority.Camera.Value - 5, function()
+            if not espEnabled then
+                for _, data in pairs(espData) do
+                    if data.Highlight then
+                        data.Highlight:Destroy()
+                    end
+                    if data.Billboard then
+                        data.Billboard:Destroy()
+                    end
+                end
+                espData = {}
+                RunService:UnbindFromRenderStep("ESP")
+                print("[Exploit Debug] ESP OFF")
+                return
+            end
+            local character = GetCharacter()
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= Player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") then
+                    if not espData[player] then
+                        CreateESP(player)
+                    else
+                        local data = espData[player]
+                        if data.HealthLabel and player.Character.Humanoid then
+                            data.HealthLabel.Text = math.floor(player.Character.Humanoid.Health) .. "/" .. player.Character.Humanoid.MaxHealth
+                        end
+                        if data.DistanceLabel and player.Character.HumanoidRootPart then
+                            local distance = (player.Character.HumanoidRootPart.Position - root.Position).Magnitude
+                            data.DistanceLabel.Text = math.floor(distance) .. " studs"
+                        end
+                    end
+                end
+            end
+        end)
+        StarterGui:SetCore("ChatMakeSystemMessage", {Text = "ESP ON"; Color = Color3.fromRGB(255, 0, 0)})
+    else
+        espEnabled = false
+        for _, data in pairs(espData) do
+            if data.Highlight then
+                data.Highlight:Destroy()
+            end
+            if data.Billboard then
+                data.Billboard:Destroy()
+            end
+        end
+        espData = {}
+        RunService:UnbindFromRenderStep("ESP")
+        StarterGui:SetCore("ChatMakeSystemMessage", {Text = "ESP OFF"; Color = Color3.fromRGB(255, 0, 0)})
+    end
+end
+
+-- Create feature buttons with functionality
+local aimbotButton, aimbotToggle = CreateFeatureButton("Aimbot", 10, "P", ToggleAimbot)
+local flyButton, flyToggle = CreateFeatureButton("Fly", 50, "F", ToggleFly)
+local espButton, espToggle = CreateFeatureButton("ESP", 90, "E", ToggleESP)
+
+-- Info section
+local InfoFrame = Instance.new("Frame")
+InfoFrame.Name = "InfoFrame"
+InfoFrame.Size = UDim2.new(1, 0, 0, 80)
+InfoFrame.Position = UDim2.new(0, 0, 0, 140)
+InfoFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+InfoFrame.BorderColor3 = Color3.fromRGB(45, 45, 45)
+InfoFrame.BorderSizePixel = 1
+InfoFrame.Parent = ContentFrame
+
+local InfoLabel = Instance.new("TextLabel")
+InfoLabel.Name = "InfoLabel"
+InfoLabel.Size = UDim2.new(1, -10, 1, -10)
+InfoLabel.Position = UDim2.new(0, 5, 0, 5)
+InfoLabel.BackgroundTransparency = 1
+InfoLabel.Text = "Status: Ready\nGame: Jailbreak\nVersion: 1.0"
+InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+InfoLabel.TextSize = 10
+InfoLabel.Font = Enum.Font.Code
+InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+InfoLabel.TextYAlignment = Enum.TextYAlignment.Top
+InfoLabel.Parent = InfoFrame
+
+-- Credits
+local CreditsLabel = Instance.new("TextLabel")
+CreditsLabel.Name = "Credits"
+CreditsLabel.Size = UDim2.new(1, -10, 0, 20)
+CreditsLabel.Position = UDim2.new(0, 5, 1, -25)
+CreditsLabel.BackgroundTransparency = 1
+CreditsLabel.Text = "Developed by D310O_O534 and The_EmpressOfIight"
+CreditsLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+CreditsLabel.TextSize = 9
+CreditsLabel.Font = Enum.Font.Code
+CreditsLabel.TextXAlignment = Enum.TextXAlignment.Left
+CreditsLabel.Parent = ContentFrame
+
+-- Settings Panel
+local SettingsPanel = Instance.new("Frame")
+SettingsPanel.Name = "SettingsPanel"
+SettingsPanel.Size = UDim2.new(0, 250, 0, 200)
+SettingsPanel.Position = UDim2.new(0, 340, 0, 50)
+SettingsPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+SettingsPanel.BorderColor3 = Color3.fromRGB(60, 60, 60)
+SettingsPanel.BorderSizePixel = 1
+SettingsPanel.Visible = false
+SettingsPanel.Parent = ScreenGui
+
+-- Settings Title Bar
+local SettingsTitleBar = Instance.new("Frame")
+SettingsTitleBar.Name = "TitleBar"
+SettingsTitleBar.Size = UDim2.new(1, 0, 0, 25)
+SettingsTitleBar.Position = UDim2.new(0, 0, 0, 0)
+SettingsTitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+SettingsTitleBar.BorderSizePixel = 0
+SettingsTitleBar.Parent = SettingsPanel
+
+local SettingsTitle = Instance.new("TextLabel")
+SettingsTitle.Name = "Title"
+SettingsTitle.Size = UDim2.new(1, -25, 1, 0)
+SettingsTitle.Position = UDim2.new(0, 5, 0, 0)
+SettingsTitle.BackgroundTransparency = 1
+SettingsTitle.Text = "Settings"
+SettingsTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+SettingsTitle.TextSize = 12
+SettingsTitle.Font = Enum.Font.Code
+SettingsTitle.TextXAlignment = Enum.TextXAlignment.Left
+SettingsTitle.Parent = SettingsTitleBar
+
+local SettingsCloseButton = Instance.new("TextButton")
+SettingsCloseButton.Name = "CloseButton"
+SettingsCloseButton.Size = UDim2.new(0, 20, 0, 20)
+SettingsCloseButton.Position = UDim2.new(1, -23, 0, 2)
+SettingsCloseButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+SettingsCloseButton.BorderColor3 = Color3.fromRGB(80, 80, 80)
+SettingsCloseButton.BorderSizePixel = 1
+SettingsCloseButton.Text = "X"
+SettingsCloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SettingsCloseButton.TextSize = 10
+SettingsCloseButton.Font = Enum.Font.Code
+SettingsCloseButton.Parent = SettingsTitleBar
+
+-- Settings Content
+local SettingsContent = Instance.new("Frame")
+SettingsContent.Name = "Content"
+SettingsContent.Size = UDim2.new(1, -10, 1, -35)
+SettingsContent.Position = UDim2.new(0, 5, 0, 30)
+SettingsContent.BackgroundTransparency = 1
+SettingsContent.Parent = SettingsPanel
+
+-- Settings options
+local function CreateSettingOption(name, value, yPos, updateFunc)
+    local OptionFrame = Instance.new("Frame")
+    OptionFrame.Name = name .. "Option"
+    OptionFrame.Size = UDim2.new(1, 0, 0, 25)
+    OptionFrame.Position = UDim2.new(0, 0, 0, yPos)
+    OptionFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    OptionFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
+    OptionFrame.BorderSizePixel = 1
+    OptionFrame.Parent = SettingsContent
+    
+    local OptionLabel = Instance.new("TextLabel")
+    OptionLabel.Name = "Label"
+    OptionLabel.Size = UDim2.new(0, 120, 1, 0)
+    OptionLabel.Position = UDim2.new(0, 5, 0, 0)
+    OptionLabel.BackgroundTransparency = 1
+    OptionLabel.Text = name
+    OptionLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    OptionLabel.TextSize = 10
+    OptionLabel.Font = Enum.Font.Code
+    OptionLabel.TextXAlignment = Enum.TextXAlignment.Left
+    OptionLabel.Parent = OptionFrame
+    
+    local ValueLabel = Instance.new("TextLabel")
+    ValueLabel.Name = "Value"
+    ValueLabel.Size = UDim2.new(0, 80, 1, 0)
+    ValueLabel.Position = UDim2.new(1, -85, 0, 0)
+    ValueLabel.BackgroundTransparency = 1
+    ValueLabel.Text = value
+    ValueLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    ValueLabel.TextSize = 10
+    ValueLabel.Font = Enum.Font.Code
+    ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    ValueLabel.Parent = OptionFrame
+    
+    if updateFunc then
+        local ToggleButton = Instance.new("TextButton")
+        ToggleButton.Size = UDim2.new(1, 0, 1, 0)
+        ToggleButton.BackgroundTransparency = 1
+        ToggleButton.Text = ""
+        ToggleButton.Parent = OptionFrame
+        ToggleButton.MouseButton1Click:Connect(function()
+            updateFunc(ValueLabel)
+        end)
+    end
+    
+    return OptionFrame, ValueLabel
+end
+
+-- Create settings with functionality
+local function UpdateKeybind(label, keyName)
+    local connection
+    connection = UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            keybinds[keyName] = input.KeyCode
+            label.Text = input.KeyCode.Name
+            print("[Exploit Debug] " .. keyName .. " key set to: " .. input.KeyCode.Name)
+            connection:Disconnect()
+        end
+    end)
+end
+
+local function UpdateFlySpeed(label)
+    local speed = tonumber(label.Text) or 50
+    speed = speed + 10
+    if speed > 200 then speed = 50 end
+    flySpeed = speed
+    label.Text = tostring(speed)
+    print("[Exploit Debug] Fly Speed set to: " .. speed)
+end
+
+local _, aimbotKeyLabel = CreateSettingOption("Aimbot Key", "P", 10, function(label) UpdateKeybind(label, "Aimbot") end)
+local _, flyKeyLabel = CreateSettingOption("Fly Key", "F", 40, function(label) UpdateKeybind(label, "Fly") end)
+local _, espKeyLabel = CreateSettingOption("ESP Key", "E", 70, function(label) UpdateKeybind(label, "ESP") end)
+local _, flySpeedLabel = CreateSettingOption("Fly Speed", "50", 100, UpdateFlySpeed)
+
+-- Button connections
+SettingsButton.MouseButton1Click:Connect(function()
+    SettingsPanel.Visible = not SettingsPanel.Visible
+end)
+
+SettingsCloseButton.MouseButton1Click:Connect(function()
+    SettingsPanel.Visible = false
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    aimbotToggle(false)
+    flyToggle(false)
+    espToggle(false)
+    ScreenGui:Destroy()
+end)
+
+-- Keybind handling
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == keybinds.Aimbot then
+        aimbotToggle(not aimbotLocked)
+    elseif input.KeyCode == keybinds.Fly then
+        flyToggle(not flying)
+    elseif input.KeyCode == keybinds.ESP then
+        espToggle(not espEnabled)
+    end
+end)
+
+-- Player events
+Players.PlayerAdded:Connect(function(player)
+    if espEnabled then
+        player.CharacterAdded:Connect(function()
+            CreateESP(player)
+        end)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    if espData[player] then
+        if espData[player].Highlight then
+            espData[player].Highlight:Destroy()
+        end
+        if espData[player].Billboard then
+            espData[player].Billboard:Destroy()
+        end
+        espData[player] = nil
+    end
+end)
+
+Player.CharacterAdded:Connect(function(character)
+    print("[Exploit Debug] Character respawned")
+    Character = character
+    HumanoidRootPart = character:WaitForChild("HumanoidRootPart")
+end)
+
+-- Make draggable
+local function MakeDraggable(frame, dragBar)
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+    
+    dragBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+    
+    dragBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    dragBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+end
+
+-- Make both frames draggable
+MakeDraggable(MainFrame, TitleBar)
+MakeDraggable(SettingsPanel, SettingsTitleBar)
+
+-- Hover effects for buttons
+local function AddButtonHover(button)
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    end)
+    
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end)
+end
+
+AddButtonHover(CloseButton)
+AddButtonHover(SettingsButton)
+AddButtonHover(SettingsCloseButton)
+
+-- Initialize
+local success, errorMsg = pcall(function()
+    wait(3)
+    if not Camera then
+        print("[Exploit Debug] Error: Camera not found")
+        return
+    end
+    StarterGui:SetCore("ChatMakeSystemMessage", {
+        Text = "Exploit Loaded! Aimbot: P, Fly: F, ESP: E";
+        Color = Color3.fromRGB(255, 0, 0)
+    })
+end)
+
+if not success then
+    print("[Exploit Debug] Init error: " .. tostring(errorMsg))
+    local FallbackGui = Instance.new("ScreenGui")
+    FallbackGui.Parent = Player.PlayerGui
+    local FallbackLabel = Instance.new("TextLabel")
+    FallbackLabel.Size = UDim2.new(0, 200, 0, 30)
+    FallbackLabel.Position = UDim2.new(0, 10, 0, 10)
+    FallbackLabel.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    FallbackLabel.Text = "Exploit Failed! Check Console"
+    FallbackLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FallbackLabel.TextSize = 12
+    FallbackLabel.Parent = FallbackGui
+end
+
+print("[Exploit Debug] Exploit UI loaded successfully!")
